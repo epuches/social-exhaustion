@@ -12,7 +12,38 @@ const PORT = 3000;
 
 app.use(express.json());
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const getGeminiKey = () => {
+  const key = process.env.GEMINI_API_KEY || process.env.API_KEY || process.env.VITE_GEMINI_API_KEY;
+  
+  if (!key) {
+    console.warn("No API key found in process.env (checked GEMINI_API_KEY, API_KEY, VITE_GEMINI_API_KEY)");
+    return null;
+  }
+
+  let trimmed = String(key).trim();
+  
+  // Remove surrounding quotes if they exist
+  trimmed = trimmed.replace(/^["']|["']$/g, '');
+  
+  if (trimmed === "undefined" || trimmed === "null" || trimmed === "" || trimmed.includes("TODO") || trimmed === "MY_GEMINI_API_KEY") {
+    console.warn(`API key value "${trimmed}" is considered invalid (placeholder or empty).`);
+    return null;
+  }
+  
+  console.log(`Using API key starting with: ${trimmed.substring(0, 4)}... (length: ${trimmed.length})`);
+  
+  if (!trimmed.startsWith("AIza")) {
+    console.warn("WARNING: API key does not start with 'AIza'. It might be an invalid Google AI Studio key.");
+  }
+  
+  return trimmed;
+};
+
+const getAI = () => {
+  const key = getGeminiKey();
+  return key ? new GoogleGenAI({ apiKey: key }) : null;
+};
+
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const APP_URL = process.env.APP_URL || process.env.VITE_APP_URL || "http://localhost:3000";
 
@@ -27,8 +58,12 @@ Guidelines:
 // API Routes
 app.post("/api/generate-profile", async (req, res) => {
   try {
+    const ai = getAI();
+    if (!ai) {
+      return res.status(500).json({ error: "GEMINI_API_KEY is not configured on the server." });
+    }
     const { quizData } = req.body;
-    const model = "gemini-3.1-pro-preview";
+    const model = "gemini-3-flash-preview";
     
     const prompt = `Based on the user data provided, generate a 'Social Exhaustion Profile.'
     Input: ${JSON.stringify(quizData)}
@@ -45,6 +80,7 @@ app.post("/api/generate-profile", async (req, res) => {
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
+        maxOutputTokens: 1000,
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -61,43 +97,54 @@ app.post("/api/generate-profile", async (req, res) => {
       }
     });
 
-    const profile = JSON.parse(response.text || "{}");
-
-    // Email sending logic
-    if (quizData.email && resend) {
-      try {
-        await resend.emails.send({
-          from: "Social Exhaustion <onboarding@resend.dev>",
-          to: quizData.email,
-          subject: "Your Social Exhaustion Profile",
-          html: `
-            <h1>Hello ${quizData.user_name}</h1>
-            <p>Here is your personalized energy profile:</p>
-            <h2>${profile.type}</h2>
-            <p>${profile.validation}</p>
-            <h3>Micro-Recoveries:</h3>
-            <ul>
-              ${profile.microRecoveries.map((r: string) => `<li>${r}</li>`).join("")}
-            </ul>
-            <p>${profile.invitation}</p>
-            <hr />
-            <p><small>Sent from <a href="${APP_URL}">Recharge: The Social Exhaustion Guide</a></small></p>
-          `,
-        });
-      } catch (emailError) {
-        console.error("Failed to send email:", emailError);
+    const profileText = response.text || "{}";
+    try {
+      const profile = JSON.parse(profileText);
+      
+      // Email sending logic
+      if (quizData.email && resend) {
+        try {
+          await resend.emails.send({
+            from: "Social Exhaustion <onboarding@resend.dev>",
+            to: quizData.email,
+            subject: "Your Social Exhaustion Profile",
+            html: `
+              <h1>Hello ${quizData.user_name}</h1>
+              <p>Here is your personalized energy profile:</p>
+              <h2>${profile.type}</h2>
+              <p>${profile.validation}</p>
+              <h3>Micro-Recoveries:</h3>
+              <ul>
+                ${profile.microRecoveries ? profile.microRecoveries.map((r: string) => `<li>${r}</li>`).join("") : ""}
+              </ul>
+              <p>${profile.invitation}</p>
+              <hr />
+              <p><small>Sent from <a href="${APP_URL}">Recharge: The Social Exhaustion Guide</a></small></p>
+            `,
+          });
+        } catch (emailError) {
+          console.error("Failed to send email:", emailError);
+        }
       }
-    }
 
-    res.json(profile);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to generate profile" });
+      res.json(profile);
+    } catch (parseError) {
+      console.error("Failed to parse profile JSON:", profileText);
+      res.status(500).json({ error: "Invalid response format from AI" });
+    }
+  } catch (error: any) {
+    console.error("Profile generation error:", error);
+    const errorMessage = error.message || "Failed to generate profile";
+    res.status(500).json({ error: errorMessage });
   }
 });
 
 app.post("/api/generate-boundaries", async (req, res) => {
   try {
+    const ai = getAI();
+    if (!ai) {
+      return res.status(500).json({ error: "GEMINI_API_KEY is not configured on the server." });
+    }
     const { situation, email } = req.body;
     const model = "gemini-3-flash-preview";
     
@@ -117,6 +164,7 @@ app.post("/api/generate-boundaries", async (req, res) => {
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
+        maxOutputTokens: 800,
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -129,41 +177,52 @@ app.post("/api/generate-boundaries", async (req, res) => {
       }
     });
 
-    const scripts = JSON.parse(response.text || "{}");
+    const scriptsText = response.text || "{}";
+    try {
+      const scripts = JSON.parse(scriptsText);
 
-    if (email && resend) {
-      try {
-        await resend.emails.send({
-          from: "Social Exhaustion <onboarding@resend.dev>",
-          to: email,
-          subject: "Your Boundary Scripts",
-          html: `
-            <h1>Your Boundary Scripts</h1>
-            <p><strong>Situation:</strong> ${situation}</p>
-            <h3>Gentle Script:</h3>
-            <p>"${scripts.gentle}"</p>
-            <h3>Direct Script:</h3>
-            <p>"${scripts.direct}"</p>
-            <h3>Business Script:</h3>
-            <p>"${scripts.business}"</p>
-            <hr />
-            <p><small>Sent from <a href="${APP_URL}">Recharge: The Social Exhaustion Guide</a></small></p>
-          `,
-        });
-      } catch (emailError) {
-        console.error("Failed to send email:", emailError);
+      if (email && resend) {
+        try {
+          await resend.emails.send({
+            from: "Social Exhaustion <onboarding@resend.dev>",
+            to: email,
+            subject: "Your Boundary Scripts",
+            html: `
+              <h1>Your Boundary Scripts</h1>
+              <p><strong>Situation:</strong> ${situation}</p>
+              <h3>Gentle Script:</h3>
+              <p>"${scripts.gentle}"</p>
+              <h3>Direct Script:</h3>
+              <p>"${scripts.direct}"</p>
+              <h3>Business Script:</h3>
+              <p>"${scripts.business}"</p>
+              <hr />
+              <p><small>Sent from <a href="${APP_URL}">Recharge: The Social Exhaustion Guide</a></small></p>
+            `,
+          });
+        } catch (emailError) {
+          console.error("Failed to send email:", emailError);
+        }
       }
-    }
 
-    res.json(scripts);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to generate boundaries" });
+      res.json(scripts);
+    } catch (parseError) {
+      console.error("Failed to parse scripts JSON:", scriptsText);
+      res.status(500).json({ error: "Invalid response format from AI" });
+    }
+  } catch (error: any) {
+    console.error("Boundary generation error:", error);
+    const errorMessage = error.message || "Failed to generate boundaries";
+    res.status(500).json({ error: errorMessage });
   }
 });
 
 app.get("/api/blog-post", async (req, res) => {
   try {
+    const ai = getAI();
+    if (!ai) {
+      return res.status(500).json({ error: "GEMINI_API_KEY is not configured on the server." });
+    }
     const model = "gemini-3-flash-preview";
     const prompt = `Draft a 800-word blog post titled 'The Science of the Social Battery: Why Your Brain Feels Fried.'
     Structure with H2 headers.
@@ -175,14 +234,16 @@ app.get("/api/blog-post", async (req, res) => {
       model,
       contents: prompt,
       config: {
-        systemInstruction: SYSTEM_INSTRUCTION
+        systemInstruction: SYSTEM_INSTRUCTION,
+        maxOutputTokens: 2000
       }
     });
 
     res.json({ text: response.text || "" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to generate blog post" });
+  } catch (error: any) {
+    console.error("Blog generation error:", error);
+    const errorMessage = error.message || "Failed to generate blog post";
+    res.status(500).json({ error: errorMessage });
   }
 });
 
