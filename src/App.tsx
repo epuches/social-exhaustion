@@ -129,6 +129,8 @@ export default function App() {
   const [boundaryEmail, setBoundaryEmail] = useState('');
   const [scripts, setScripts] = useState<BoundaryScripts | null>(null);
   const [blogPost, setBlogPost] = useState<string>('');
+  const [blogError, setBlogError] = useState<string | null>(null);
+  const [blogLoading, setBlogLoading] = useState<boolean>(false);
 
   const handleQuizSubmit = async () => {
     setLoading(true);
@@ -157,14 +159,23 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (page === 'blog' && !blogPost) {
+    if (page === 'blog' && !blogPost && !blogLoading) {
       const fetchBlog = async () => {
-        const post = await generateBlogPost();
-        setBlogPost(post);
+        setBlogLoading(true);
+        setBlogError(null);
+        try {
+          const post = await generateBlogPost();
+          setBlogPost(post);
+        } catch (error) {
+          console.error(error);
+          setBlogError("The library is currently being restocked. Please try again in a moment.");
+        } finally {
+          setBlogLoading(false);
+        }
       };
       fetchBlog();
     }
-  }, [page]);
+  }, [page, blogPost, blogLoading]);
 
   return (
     <div className="min-h-screen pt-16 pb-12">
@@ -486,7 +497,7 @@ export default function App() {
               exit={{ opacity: 0 }}
               className="py-12 max-w-3xl mx-auto"
             >
-              {blogPost ? (
+               {blogPost ? (
                 <article className="prose prose-recharge max-w-none">
                   <div className="text-center mb-16">
                     <span className="text-xs uppercase tracking-widest text-recharge-amber font-semibold mb-4 block">Cornerstone Content</span>
@@ -502,10 +513,27 @@ export default function App() {
                     {blogPost}
                   </div>
                 </article>
+              ) : blogError ? (
+                <div className="flex flex-col items-center justify-center py-24 text-center">
+                  <div className="w-16 h-16 bg-recharge-amber/10 rounded-full flex items-center justify-center mb-6">
+                    <RefreshCw className="w-8 h-8 text-recharge-amber" />
+                  </div>
+                  <h2 className="serif text-2xl mb-4">{blogError}</h2>
+                  <button 
+                    onClick={() => {
+                      setBlogError(null);
+                      setBlogPost('');
+                    }}
+                    className="bg-recharge-teal text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-recharge-teal/90 transition-all"
+                  >
+                    Try again
+                  </button>
+                </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
                   <RefreshCw className="w-12 h-12 text-recharge-amber animate-spin mb-6" />
                   <h2 className="serif text-2xl">Curating the library...</h2>
+                  <p className="text-recharge-teal/50 mt-2">This may take a few seconds as we gather the latest research.</p>
                 </div>
               )}
             </motion.div>

@@ -164,8 +164,8 @@ app.post("/api/generate-boundaries", async (req, res) => {
 
 app.get("/api/blog-post", async (req, res) => {
   try {
-    const model = "gemini-3.1-pro-preview";
-    const prompt = `Draft a 1,200-word blog post titled 'The Science of the Social Battery: Why Your Brain Feels Fried.'
+    const model = "gemini-3-flash-preview";
+    const prompt = `Draft a 800-word blog post titled 'The Science of the Social Battery: Why Your Brain Feels Fried.'
     Structure with H2 headers.
     Include a section on 'The Cost of Masking.'
     Incorporate the 'Recharge' brand voice (warm, humanist serif vibe).
