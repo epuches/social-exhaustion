@@ -1,0 +1,31 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Cormorant Garamond", serif;
+  
+  --color-recharge-teal: #2d4a4a;
+  --color-recharge-amber: #e67e22;
+  --color-recharge-gold: #f1c40f;
+  --color-recharge-paper: #fdfcf9;
+}
+
+body {
+  background-color: var(--color-recharge-paper);
+  color: var(--color-recharge-teal);
+  font-family: var(--font-sans);
+}
+
+.serif {
+  font-family: var(--font-serif);
+}
+
+@keyframes battery-fill {
+  0% { height: 0%; }
+  100% { height: var(--target-height); }
+}
+
+.battery-level-animate {
+  animation: battery-fill 1.5s ease-out forwards;
+}
