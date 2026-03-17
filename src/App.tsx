@@ -137,10 +137,6 @@ export default function App() {
       await new Promise(resolve => setTimeout(resolve, 3000));
       const result = await generateSocialProfile(quizData);
       setProfile(result);
-      if (quizData.email) {
-        console.log(`Sending profile to ${quizData.email}...`);
-        // In a real app, this would call an email service
-      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -151,11 +147,8 @@ export default function App() {
   const handleBoundarySubmit = async () => {
     setLoading(true);
     try {
-      const result = await generateBoundaryScripts(boundarySituation);
+      const result = await generateBoundaryScripts(boundarySituation, boundaryEmail);
       setScripts(result);
-      if (boundaryEmail) {
-        console.log(`Sending scripts to ${boundaryEmail}...`);
-      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -377,6 +370,20 @@ export default function App() {
                         Start 14-Day Pro Plan
                       </button>
                       <p className="text-xs opacity-40 mt-4">No credit card required to start.</p>
+                    </div>
+
+                    <div className="flex justify-center pt-8">
+                      <button 
+                        onClick={() => {
+                          const url = import.meta.env.VITE_APP_URL || window.location.origin;
+                          navigator.clipboard.writeText(`I just got my Social Exhaustion Profile: ${profile.type}. Check yours at ${url}`);
+                          alert("Link copied to clipboard!");
+                        }}
+                        className="flex items-center gap-2 text-recharge-teal/60 hover:text-recharge-amber transition-colors text-sm font-medium"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Share this tool
+                      </button>
                     </div>
                   </div>
                 </div>
