@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-serif), serif;
+  
+  --color-recharge-teal: #2d4a4a;
+  --color-recharge-amber: #e67e22;
+  --color-recharge-gold: #f1c40f;
+  --color-recharge-paper: #fdfcf9;
+}
+
+body {
+  background-color: var(--color-recharge-paper);
+  color: var(--color-recharge-teal);
+  font-family: var(--font-sans);
+}
+
+.serif {
+  font-family: var(--font-serif);
+}
+
+@keyframes battery-fill {
+  0% { height: 0%; }
+  100% { height: var(--target-height); }
+}
+
+.battery-level-animate {
+  animation: battery-fill 1.5s ease-out forwards;
+}
+
+/* Custom prose styles for the blog */
+.prose-recharge {
+  --tw-prose-body: var(--color-recharge-teal);
+  --tw-prose-headings: var(--color-recharge-teal);
+  --tw-prose-lead: var(--color-recharge-teal);
+  --tw-prose-links: var(--color-recharge-amber);
+  --tw-prose-bold: var(--color-recharge-teal);
+  --tw-prose-counters: var(--color-recharge-teal);
+  --tw-prose-bullets: var(--color-recharge-amber);
+  --tw-prose-hr: var(--color-recharge-teal);
+  --tw-prose-quotes: var(--color-recharge-teal);
+  --tw-prose-quote-borders: var(--color-recharge-amber);
+  --tw-prose-captions: var(--color-recharge-teal);
+  --tw-prose-code: var(--color-recharge-teal);
+  --tw-prose-pre-code: var(--color-recharge-paper);
+  --tw-prose-pre-bg: var(--color-recharge-teal);
+  --tw-prose-th-borders: var(--color-recharge-teal);
+  --tw-prose-td-borders: var(--color-recharge-teal);
+}

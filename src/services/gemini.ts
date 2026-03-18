@@ -1,7 +1,7 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 import { QuizData, SocialProfile, BoundaryScripts } from "../types";
 
-const apiKey = process.env.GEMINI_API_KEY || "";
+const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
 
 if (!apiKey) {
   console.warn("GEMINI_API_KEY is not set. AI features will not work correctly.");
@@ -22,7 +22,7 @@ export async function generateSocialProfile(data: QuizData): Promise<SocialProfi
     throw new Error("GEMINI_API_KEY is missing. Please configure it in your environment variables.");
   }
 
-  const model = "gemini-3.1-pro-preview";
+  const model = "gemini-flash-latest";
   
   const prompt = `Based on the user data provided, generate a 'Social Exhaustion Profile.'
   Input: ${JSON.stringify(data)}
@@ -40,6 +40,7 @@ export async function generateSocialProfile(data: QuizData): Promise<SocialProfi
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -97,6 +98,7 @@ export async function generateBoundaryScripts(situation: string): Promise<Bounda
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -124,24 +126,32 @@ export async function generateBoundaryScripts(situation: string): Promise<Bounda
   }
 }
 
-export async function generateBlogPost(): Promise<string> {
+export async function generateBlogPost(data?: QuizData): Promise<string> {
   if (!apiKey) {
     return "API Key missing. Please configure GEMINI_API_KEY.";
   }
 
-  const model = "gemini-3.1-pro-preview";
-  const prompt = `Draft a 1,200-word blog post titled 'The Science of the Social Battery: Why Your Brain Feels Fried.'
-  Structure with H2 headers.
-  Include a section on 'The Cost of Masking.'
-  Incorporate the 'Recharge' brand voice (warm, humanist serif vibe).
-  Target keywords: social exhaustion symptoms, introvert burnout, recovery for HSPs.`;
+  const model = "gemini-3.1-flash-lite-preview";
+  const prompt = data 
+    ? `Draft a 600-word blog post tailored to a user with these patterns: ${JSON.stringify(data)}.
+       Title should be something like 'The Science of the ${data.primary_drain} Drain' or similar.
+       Structure with H2 headers.
+       Include a section on 'The Cost of Masking.'
+       Incorporate the 'Recharge' brand voice (warm, humanist serif vibe).
+       Target keywords: social exhaustion symptoms, introvert burnout, recovery for HSPs.`
+    : `Draft a 600-word blog post titled 'The Science of the Social Battery: Why Your Brain Feels Fried.'
+       Structure with H2 headers.
+       Include a section on 'The Cost of Masking.'
+       Incorporate the 'Recharge' brand voice (warm, humanist serif vibe).
+       Target keywords: social exhaustion symptoms, introvert burnout, recovery for HSPs.`;
 
   try {
     const response = await ai.models.generateContent({
       model,
       contents: prompt,
       config: {
-        systemInstruction: SYSTEM_INSTRUCTION
+        systemInstruction: SYSTEM_INSTRUCTION,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
       }
     });
 
