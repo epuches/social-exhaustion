@@ -62,26 +62,25 @@ const Logo = () => (
       
       {/* Battery Body */}
       <div className="w-8 h-10 border-2 border-recharge-teal rounded-md relative p-0.5 bg-white shadow-sm overflow-hidden">
-        {/* Depleted Level with Flicker */}
+        {/* Animated Level */}
         <motion.div 
-          className="absolute bottom-0 left-0 right-0 bg-recharge-amber" 
-          initial={{ height: "15%" }}
+          className="absolute bottom-0 left-0 right-0" 
+          initial={{ height: "15%", backgroundColor: "#F27D26" }}
           animate={{ 
-            height: ["15%", "18%", "15%", "12%", "15%"],
-            opacity: [0.7, 0.4, 0.8, 0.5, 0.7]
+            height: ["15%", "80%", "40%", "95%", "15%"],
+            backgroundColor: ["#F27D26", "#10B981", "#FBBF24", "#10B981", "#F27D26"],
           }}
           transition={{ 
-            duration: 4, 
+            duration: 8, 
             repeat: Infinity, 
-            times: [0, 0.2, 0.4, 0.6, 1],
             ease: "easeInOut" 
           }}
         />
         
         {/* Subtle Diagonal Strike (Depleted indicator) */}
         <motion.div 
-          className="absolute inset-0 flex items-center justify-center opacity-20"
-          animate={{ opacity: [0.1, 0.3, 0.1] }}
+          className="absolute inset-0 flex items-center justify-center opacity-10"
+          animate={{ opacity: [0.05, 0.2, 0.05] }}
           transition={{ duration: 3, repeat: Infinity }}
         >
           <div className="w-full h-0.5 bg-recharge-teal rotate-45" />
@@ -130,6 +129,7 @@ const Navbar = ({ currentPage, setPage }: { currentPage: Page; setPage: (p: Page
 
 export default function Home() {
   const [page, setPage] = useState<Page>('home');
+  const [mounted, setMounted] = useState(false);
   const [quizData, setQuizData] = useState<QuizData>({
     user_name: '',
     email: '',
@@ -139,11 +139,30 @@ export default function Home() {
     recovery_preference: '',
     age_group: '18-29'
   });
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [profile, setProfile] = useState<SocialProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [boundarySituation, setBoundarySituation] = useState('');
   const [boundaryEmail, setBoundaryEmail] = useState('');
+
+  // Sync email between quizData and boundaryEmail
+  useEffect(() => {
+    if (quizData.email !== boundaryEmail) {
+      setBoundaryEmail(quizData.email || '');
+    }
+  }, [quizData.email, boundaryEmail]);
+
+  useEffect(() => {
+    if (boundaryEmail !== quizData.email) {
+      setQuizData(prev => ({ ...prev, email: boundaryEmail }));
+    }
+  }, [boundaryEmail, quizData.email]);
+
   const [scripts, setScripts] = useState<BoundaryScripts | null>(null);
   const [blogPost, setBlogPost] = useState<string>('');
   const [showCaptcha, setShowCaptcha] = useState(false);
@@ -152,6 +171,22 @@ export default function Home() {
   const [subscribed, setSubscribed] = useState(false);
   const [submittingPro, setSubmittingPro] = useState(false);
   const [emailStatus, setEmailStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [selectedArticle, setSelectedArticle] = useState<string | null>(null);
+
+  const COMMON_SCENARIOS = [
+    "A coworker wants to 'hop on a quick call' but I'm in deep focus mode.",
+    "A friend invited me to a loud concert tonight, but my battery is at 5%.",
+    "Family members are asking when I'm coming over for a long weekend visit.",
+    "Someone is asking for 'just 15 minutes' of my time to pick my brain.",
+    "I'm at a party and I need to leave early without feeling like a buzzkill.",
+    "A neighbor wants to chat in the hallway but I just got home and need quiet.",
+    "Group chat is blowing up and I need to mute it without being rude."
+  ];
+
+  const giveMeIdeas = () => {
+    const random = COMMON_SCENARIOS[Math.floor(Math.random() * COMMON_SCENARIOS.length)];
+    setBoundarySituation(random);
+  };
 
   const sendEmail = async (to: string, subject: string, html: string) => {
     setEmailStatus(null);
@@ -268,18 +303,45 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (page === 'blog' && !blogPost) {
+    if (page === 'blog' && !blogPost && !selectedArticle) {
       const fetchBlog = async () => {
         const post = await generateBlogPost();
         setBlogPost(post);
       };
       fetchBlog();
     }
-  }, [page, blogPost]);
+  }, [page, blogPost, selectedArticle]);
+
+  const handleArticleSelect = async (topic: string) => {
+    setLoading(true);
+    setSelectedArticle(topic);
+    setBlogPost('');
+    try {
+      const post = await generateBlogPost({ primary_drain: topic } as any);
+      setBlogPost(post);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const navigateTo = (p: Page) => {
+    setPage(p);
+    if (p !== 'blog') {
+      setSelectedArticle(null);
+    }
+    // If navigating to home, we might want to reset other things too
+    if (p === 'home') {
+      setSelectedArticle(null);
+    }
+  };
+
+  if (!mounted) return null;
 
   return (
     <div className="min-h-screen pt-16 pb-12">
-      <Navbar currentPage={page} setPage={setPage} />
+      <Navbar currentPage={page} setPage={navigateTo} />
       
       <main className="max-w-4xl mx-auto px-6">
         <AnimatePresence mode="wait">
@@ -303,15 +365,38 @@ export default function Home() {
                 Social exhaustion isn&apos;t a flaw; it&apos;s a signal. We help you listen to it, 
                 manage it, and find your way back to calm.
               </p>
-              <motion.button 
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setPage('quiz')}
-                className="bg-recharge-teal text-recharge-paper px-10 py-5 rounded-full font-medium hover:bg-recharge-teal/90 transition-all flex items-center gap-3 mx-auto group shadow-2xl shadow-recharge-teal/20 text-lg"
-              >
-                Check Your Battery
-                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </motion.button>
+              
+              <div className="flex flex-col md:flex-row gap-6 justify-center items-center">
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigateTo('quiz')}
+                  className="bg-recharge-teal text-recharge-paper px-10 py-5 rounded-full font-medium hover:bg-recharge-teal/90 transition-all flex items-center gap-3 group shadow-2xl shadow-recharge-teal/20 text-lg w-full md:w-auto justify-center"
+                >
+                  Check Your Battery
+                  <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </motion.button>
+
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigateTo('boundary')}
+                  className="bg-white border-2 border-recharge-teal/10 text-recharge-teal px-10 py-5 rounded-full font-medium hover:border-recharge-teal/30 transition-all flex items-center gap-3 group text-lg w-full md:w-auto justify-center"
+                >
+                  Set Your Boundary
+                  <MessageSquare className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                </motion.button>
+
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigateTo('blog')}
+                  className="bg-recharge-amber/10 border-2 border-recharge-amber/20 text-recharge-amber px-10 py-5 rounded-full font-medium hover:bg-recharge-amber/20 transition-all flex items-center gap-3 group text-lg w-full md:w-auto justify-center"
+                >
+                  Get lost in the library
+                  <BookOpen className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                </motion.button>
+              </div>
             </motion.div>
           )}
 
@@ -645,7 +730,16 @@ export default function Home() {
               <div className="bg-white p-10 md:p-16 rounded-[2.5rem] shadow-2xl shadow-recharge-teal/5 border border-recharge-teal/5 mb-12">
                 <div className="space-y-8">
                   <div className="space-y-4">
-                    <label className="block text-xs font-bold uppercase tracking-widest opacity-40">What&apos;s the situation?</label>
+                    <div className="flex justify-between items-end">
+                      <label className="block text-xs font-bold uppercase tracking-widest opacity-40">What&apos;s the situation?</label>
+                      <button 
+                        onClick={giveMeIdeas}
+                        className="text-[10px] font-bold uppercase tracking-widest text-recharge-amber hover:text-recharge-amber/80 transition-colors flex items-center gap-1.5 group"
+                      >
+                        <Sparkles className="w-3 h-3 group-hover:rotate-12 transition-transform" />
+                        I&apos;m stuck, help me out
+                      </button>
+                    </div>
                     <textarea 
                       placeholder="e.g., A friend wants me to go to a loud concert tonight, but I&apos;m empty."
                       className="w-full bg-recharge-paper border-2 border-recharge-teal/5 rounded-[1.5rem] p-6 h-40 focus:border-recharge-amber outline-none transition-all resize-none text-lg serif italic leading-relaxed"
@@ -751,19 +845,85 @@ export default function Home() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="py-20 max-w-3xl mx-auto"
+              className="py-20 max-w-4xl mx-auto"
             >
-              {blogPost ? (
+              {!selectedArticle ? (
+                <div className="text-center mb-16">
+                  <motion.span 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-xs uppercase tracking-[0.3em] text-recharge-amber font-bold mb-6 block"
+                  >
+                    The Library
+                  </motion.span>
+                  <h2 className="serif text-5xl mb-12 tracking-tight">Deep Dives into the Drains</h2>
+                  <p className="text-recharge-teal/60 mb-12 max-w-xl mx-auto">Select a topic to understand the science behind your specific social exhaustion patterns.</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-20">
+                    {[
+                      'Open-plan office noise', 
+                      'Back-to-back meetings', 
+                      'Small talk with strangers', 
+                      'Family obligations', 
+                      'Digital noise/Social media'
+                    ].map((topic) => (
+                      <motion.button
+                        key={topic}
+                        whileHover={{ scale: 1.02, y: -5 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleArticleSelect(topic)}
+                        className="bg-white p-8 rounded-[2rem] border border-recharge-teal/5 shadow-lg text-left group hover:border-recharge-amber/20 transition-all"
+                      >
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="p-3 bg-recharge-amber/5 rounded-xl text-recharge-amber group-hover:bg-recharge-amber group-hover:text-white transition-colors">
+                            <BookOpen className="w-6 h-6" />
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-recharge-teal/20 group-hover:text-recharge-amber group-hover:translate-x-1 transition-all" />
+                        </div>
+                        <h3 className="serif text-2xl mb-2 text-recharge-teal group-hover:text-recharge-amber transition-colors">{topic}</h3>
+                        <p className="text-sm text-recharge-teal/40 font-medium tracking-wide uppercase">Read the deep dive</p>
+                      </motion.button>
+                    ))}
+                  </div>
+
+                  {blogPost && !loading && (
+                    <div className="mt-20 border-t border-recharge-teal/5 pt-20">
+                      <h3 className="serif text-3xl mb-12">Featured: The Science of the Social Battery</h3>
+                      <article className="prose prose-recharge prose-xl max-w-none text-left bg-white p-12 rounded-[3rem] shadow-sm border border-recharge-teal/5">
+                        <div className="whitespace-pre-wrap text-lg leading-relaxed text-recharge-teal/80 serif italic">
+                          {blogPost}
+                        </div>
+                      </article>
+                    </div>
+                  )}
+                </div>
+              ) : loading ? (
+                <div className="flex flex-col items-center justify-center py-32 text-center">
+                  <RefreshCw className="w-16 h-16 text-recharge-amber animate-spin mb-10 opacity-20" />
+                  <h2 className="serif text-4xl tracking-tight">Curating the library...</h2>
+                  <p className="text-recharge-teal/40 mt-4 font-medium tracking-wide uppercase text-xs">Preparing deep-dive insights</p>
+                </div>
+              ) : (
                 <article className="prose prose-recharge prose-xl max-w-none">
+                  <button 
+                    onClick={() => { setSelectedArticle(null); }}
+                    className="flex items-center gap-2 text-recharge-teal/40 hover:text-recharge-teal mb-12 transition-colors group"
+                  >
+                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> 
+                    <span className="text-sm font-medium uppercase tracking-widest">Back to Library</span>
+                  </button>
+
                   <div className="text-center mb-24">
                     <motion.span 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="text-xs uppercase tracking-[0.3em] text-recharge-amber font-bold mb-6 block"
                     >
-                      Cornerstone Content
+                      The Science of {selectedArticle}
                     </motion.span>
-                    <h1 className="serif text-6xl md:text-7xl mb-10 leading-tight tracking-tight">The Science of the Social Battery: Why Your Brain Feels Fried</h1>
+                    <h1 className="serif text-5xl md:text-7xl mb-10 leading-tight tracking-tight">
+                      Understanding the {selectedArticle} Drain
+                    </h1>
                     <div className="flex items-center justify-center gap-6 text-sm font-bold uppercase tracking-widest opacity-30">
                       <span>12 min read</span>
                       <div className="w-1.5 h-1.5 rounded-full bg-recharge-teal" />
@@ -775,12 +935,6 @@ export default function Home() {
                     {blogPost}
                   </div>
                 </article>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-32 text-center">
-                  <RefreshCw className="w-16 h-16 text-recharge-amber animate-spin mb-10 opacity-20" />
-                  <h2 className="serif text-4xl tracking-tight">Curating the library...</h2>
-                  <p className="text-recharge-teal/40 mt-4 font-medium tracking-wide uppercase text-xs">Preparing deep-dive insights</p>
-                </div>
               )}
             </motion.div>
           )}

@@ -39,29 +39,32 @@ export async function POST(req: Request) {
 
     const resend = getResend();
     
-    // Domain Guard: Ensure we don't try to send FROM a public provider like Gmail
-    // which Resend will always reject.
-    let fromEmail = process.env.FROM_EMAIL || 'guide@social-exhaustion.com';
-    const publicProviders = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com'];
-    
-    const isPublicProvider = publicProviders.some(provider => fromEmail.toLowerCase().includes(provider));
-    if (isPublicProvider) {
-      console.warn(`FROM_EMAIL (${fromEmail}) is a public provider. Falling back to verified domain.`);
-      fromEmail = 'guide@social-exhaustion.com';
-    }
-
+    // Use an environment variable for the 'from' email, defaulting to Resend's onboarding address
+    // Note: Resend requires a verified domain to send from anything other than onboarding@resend.dev
+    const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev';
     const fromName = process.env.FROM_NAME || 'Recharge AI';
+    const fromField = `"${fromName}" <${fromEmail}>`;
+
+    console.log('Sending email with payload:', {
+      from: fromField,
+      to,
+      subject,
+      htmlLength: html.length
+    });
 
     const { data, error } = await resend.emails.send({
-      from: `${fromName} <${fromEmail}>`,
-      to: [to],
+      from: fromField,
+      to: to, // Resend accepts string or array
       subject,
       html,
     });
 
     if (error) {
-      console.error('Resend API Error:', error);
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      console.error('Resend API Error Detail:', JSON.stringify(error, null, 2));
+      return NextResponse.json({ 
+        error: error.message || 'Validation Error',
+        details: error
+      }, { status: 400 });
     }
 
     return NextResponse.json({ success: true, data });

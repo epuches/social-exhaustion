@@ -81,15 +81,15 @@ export async function generateBoundaryScripts(situation: string): Promise<Bounda
 
   const model = "gemini-3-flash-preview";
   
-  const prompt = `You are the Social Exhaustion Boundary Builder. The user will give you a difficult social situation. You will provide three scripts:
+  const prompt = `You are the Social Exhaustion Boundary Builder. The user will give you a difficult social situation. You will provide three scripts that sound like a real human speaking, with zero fluff.
   Situation: "${situation}"
   
   Return a JSON object with:
-  - gentle: Soft, explaining the need for rest.
-  - direct: Short, clear, no over-explaining.
-  - business: Professional, firm, and authoritative. Ensure it doesn't sound "weak" or apologetic, but stays respectful.
+  - gentle: Friendly and warm, but sounds like a real person talking to a friend. No "fake" or overly flowery language. Just honest and kind.
+  - direct: Short and sweet. One or two sentences max. Clear and unambiguous.
+  - business: Professional, firm, and authoritative. No apologies. Concise and business-like. It should sound strong, not weak.
   
-  Ensure all scripts preserve the relationship while protecting the user's energy.`;
+  Ensure all scripts are conversational and realistic. Avoid clichés.`;
 
   try {
     const response = await ai.models.generateContent({
