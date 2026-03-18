@@ -148,20 +148,6 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [boundarySituation, setBoundarySituation] = useState('');
-  const [boundaryEmail, setBoundaryEmail] = useState('');
-
-  // Sync email between quizData and boundaryEmail
-  useEffect(() => {
-    if (quizData.email !== boundaryEmail) {
-      setBoundaryEmail(quizData.email || '');
-    }
-  }, [quizData.email, boundaryEmail]);
-
-  useEffect(() => {
-    if (boundaryEmail !== quizData.email) {
-      setQuizData(prev => ({ ...prev, email: boundaryEmail }));
-    }
-  }, [boundaryEmail, quizData.email]);
 
   const [scripts, setScripts] = useState<BoundaryScripts | null>(null);
   const [blogPost, setBlogPost] = useState<string>('');
@@ -246,9 +232,9 @@ export default function Home() {
     try {
       const result = await generateBoundaryScripts(boundarySituation);
       setScripts(result);
-      if (boundaryEmail) {
+      if (quizData.email) {
         await sendEmail(
-          boundaryEmail,
+          quizData.email,
           'Your Boundary Scripts',
           `<h3>Situation: ${boundarySituation}</h3>
            <p><strong>Gentle:</strong> ${result.gentle}</p>
@@ -278,7 +264,7 @@ export default function Home() {
       return;
     }
 
-    const email = quizData.email || boundaryEmail;
+    const email = quizData.email;
     if (!email) {
       alert("Please provide an email address first.");
       return;
@@ -754,8 +740,8 @@ export default function Home() {
                       type="email" 
                       placeholder="you@example.com"
                       className="w-full bg-transparent border-b-2 border-recharge-teal/10 py-4 focus:border-recharge-amber outline-none transition-all text-xl serif italic"
-                      value={boundaryEmail}
-                      onChange={e => setBoundaryEmail(e.target.value)}
+                      value={quizData.email}
+                      onChange={e => setQuizData({...quizData, email: e.target.value})}
                     />
                   </div>
 

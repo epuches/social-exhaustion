@@ -4,7 +4,7 @@ import { QuizData, SocialProfile, BoundaryScripts } from "../types";
 const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
 
 if (!apiKey) {
-  console.warn("GEMINI_API_KEY is not set. AI features will not work correctly.");
+  console.warn("NEXT_PUBLIC_GEMINI_API_KEY is not set. AI features will not work correctly.");
 }
 
 const ai = new GoogleGenAI({ apiKey });
@@ -19,7 +19,7 @@ Guidelines:
 
 export async function generateSocialProfile(data: QuizData): Promise<SocialProfile> {
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is missing. Please configure it in your environment variables.");
+    throw new Error("NEXT_PUBLIC_GEMINI_API_KEY is missing. Please configure it in your environment variables.");
   }
 
   const model = "gemini-flash-latest";
@@ -76,7 +76,7 @@ export async function generateSocialProfile(data: QuizData): Promise<SocialProfi
 
 export async function generateBoundaryScripts(situation: string): Promise<BoundaryScripts> {
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is missing.");
+    throw new Error("NEXT_PUBLIC_GEMINI_API_KEY is missing.");
   }
 
   const model = "gemini-3-flash-preview";
@@ -128,7 +128,7 @@ export async function generateBoundaryScripts(situation: string): Promise<Bounda
 
 export async function generateBlogPost(data?: QuizData): Promise<string> {
   if (!apiKey) {
-    return "API Key missing. Please configure GEMINI_API_KEY.";
+    return "API Key missing. Please configure NEXT_PUBLIC_GEMINI_API_KEY.";
   }
 
   const model = "gemini-3.1-flash-lite-preview";
